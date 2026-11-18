@@ -1,0 +1,46 @@
+name: Build Web PC
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xorriso grub-pc-bin grub-common mtools wget cpio
+
+      - name: Build OS ISO
+        run: |
+          chmod +x scripts/build.sh
+          sudo ./scripts/build.sh
+
+      - name: Download v86 binaries
+        run: |
+          cp index.html dist/
+          wget -O dist/libv86.js https://copy.sh
+          wget -O dist/v86.wasm https://copy.sh
+          wget -O dist/seabios.bin https://copy.sh
+          wget -O dist/vgabios.bin https://copy.sh
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'dist'
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
