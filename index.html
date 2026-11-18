@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мой ПК в браузере</title>
+    <style>
+        body { margin: 0; background: #121212; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .toolbar { padding: 10px; background: #1f1f1f; width: 100%; display: flex; justify-content: center; gap: 10px; border-bottom: 1px solid #333; }
+        button { padding: 8px 16px; background: #2d6cdf; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #1b54bd; }
+        #screen_container { margin-top: 20px; border: 2px solid #333; }
+    </style>
+    <script src="libv86.js"></script>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="save_state">Сохранить ПК</button>
+        <button id="load_state">Загрузить ПК</button>
+        <input type="file" id="state_file" style="display: none;">
+        <button id="fullscreen">На весь экран</button>
+    </div>
+
+    <div id="screen_container">
+        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+        <canvas style="display: none"></canvas>
+    </div>
+
+    <script>
+        window.onload = function() {
+            var emulator = new V86({
+                wasm_path: "v86.wasm",
+                memory_size: 512 * 1024 * 1024,
+                vga_memory_size: 16 * 1024 * 1024,
+                screen_container: document.getElementById("screen_container"),
+                bios: { url: "seabios.bin" },
+                vga_bios: { url: "vgabios.bin" },
+                cdrom: { url: "os.iso" },
+                network_relay_url: "wss://relay.widgetry.org/",
+                autostart: true,
+            });
+
+            document.getElementById("save_state").onclick = async function() {
+                const state = await emulator.save_state();
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob([state]));
+                a.download = "my_pc_state.bin";
+                a.click();
+            };
+
+            document.getElementById("load_state").onclick = () => document.getElementById("state_file").click();
+            document.getElementById("state_file").onchange = function(e) {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    await emulator.restore_state(reader.result);
+                };
+                reader.readAsArrayBuffer(e.target.files[0]);
+            };
+
+            document.getElementById("fullscreen").onclick = function() {
+                emulator.screen_go_fullscreen();
+            };
+        };
+    </script>
+</body>
+</html>
